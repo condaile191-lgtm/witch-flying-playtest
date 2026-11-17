@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>魔女飞行 · 花海海岸试玩</title>
+<link rel="stylesheet" href="./src/ui/style.css">
+<link rel="stylesheet" href="./src/ui/journal.css">
+<link rel="stylesheet" href="./src/ui/chapter.css">
+<script type="importmap">
+{ "imports": { "three": "./vendor/three/build/three.module.js", "three/addons/": "./vendor/three/examples/jsm/" } }
+</script>
+</head>
+<body>
+<canvas id="view"></canvas>
+
+<div id="hud" hidden>
+  <div class="hud-tl">
+    <div class="seeds"><span class="seeds-icon"></span><span id="seedCount">0</span><span class="seeds-of">/ <span id="seedTotal">0</span></span>
+      <span class="compass" id="compass" title="nearest wind seed"><svg viewBox="-12 -12 24 24" width="22" height="22"><path d="M0 -9 L5 6 L0 3 L-5 6 Z" fill="currentColor"/></svg><span id="seedDist"></span></span>
+    </div>
+    <div class="place" id="place"></div>
+  </div>
+  <div class="hud-bl">
+    <div class="gust"><div class="gust-fill" id="gustFill"></div></div>
+    <div class="gust-label">gust</div>
+    <div class="trick" id="trick" hidden><kbd>Q</kbd>kickflip</div>
+  </div>
+  <div class="hud-br"><span id="speed">0</span><small>km/h</small></div>
+  <div class="hud-tr" id="job" hidden>
+    <div class="job-kicker"><span class="job-icon"></span>parcel for</div>
+    <div class="job-name"><span id="jobName"></span><span class="job-spot" id="jobSpot"></span></div>
+    <div class="job-meta"><span class="compass" id="jobCompass" title="where the parcel is going"><svg viewBox="-12 -12 24 24" width="22" height="22"><path d="M0 -9 L5 6 L0 3 L-5 6 Z" fill="currentColor"/></svg><span id="jobDist"></span></span><span class="job-count"><span id="jobCount">0</span> delivered</span></div>
+  </div>
+  <div class="prompt" id="prompt"></div>
+  <div class="card" id="card"><div class="card-kicker" id="cardKicker"></div><div class="card-name" id="cardName"></div><div class="card-sub" id="cardSub"></div></div>
+  <div class="toast" id="toast"></div>
+</div>
+
+<div id="title">
+  <div class="title-inner">
+    <p class="kicker">花海海岸 · 第一章试玩</p>
+    <h1>魔女飞行</h1>
+    <div class="bar"><div class="bar-fill" id="loadFill"></div></div>
+    <p class="status" id="loadStatus">正在准备花海与海风…</p>
+    <button id="start" hidden>开始飞行</button>
+    <div class="keys" id="keys" hidden>
+      <div><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> 移动</div>
+      <div><kbd>J</kbd> 爆破障碍</div>
+      <div><kbd>K</kbd> 获得后使用缓时</div>
+      <div><kbd>Esc</kbd> 暂停</div>
+    </div>
+  </div>
+</div>
+
+<div id="chapterUi" hidden>
+  <div class="chapter-top">
+    <div id="chapterStage">花海海岸 · 贴地花海</div>
+    <div class="chapter-track"><div id="chapterProgress"></div></div>
+    <div id="chapterStats"></div>
+    <div id="chapterTarget"></div>
+  </div>
+  <div class="chapter-actions">
+    <button id="chapterAttack" type="button">爆破 J</button>
+    <button id="chapterSlow" type="button">缓时未获得</button>
+  </div>
+  <div class="chapter-touch" aria-label="触屏移动">
+    <button data-move="left" aria-label="向左">←</button>
+    <span><button data-move="up" aria-label="上升">↑</button><button data-move="down" aria-label="下降">↓</button></span>
+    <button data-move="right" aria-label="向右">→</button>
+  </div>
+  <div id="chapterModal" hidden>
+    <div class="chapter-panel">
+      <h2 id="chapterResult">已暂停</h2>
+      <button id="chapterContinue" type="button">继续</button>
+      <button id="chapterRetry" type="button">重试本章</button>
+    </div>
+  </div>
+</div>
+
+<script type="module" src="./src/main.js"></script>
+</body>
+</html>

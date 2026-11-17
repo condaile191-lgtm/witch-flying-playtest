@@ -1,0 +1,20 @@
+#hud.chapter-only > :not(.toast) { display: none; }
+#chapterUi { position: fixed; inset: 0; z-index: 4; pointer-events: none; color: #fffdf3; font-family: system-ui, sans-serif; text-shadow: 0 1px 7px #193346; }
+.chapter-top { position: absolute; left: 3%; top: 4%; width: min(350px, 52vw); font-size: clamp(13px, 1.3vw, 18px); font-weight: 650; letter-spacing: .05em; }
+.chapter-track { height: 3px; margin: 10px 0; background: #ffffff66; }
+#chapterProgress { height: 100%; width: 0; background: #fff6c8; box-shadow: 0 0 10px #fff; }
+#chapterStats { font-size: 12px; letter-spacing: .1em; }
+#chapterTarget { margin-top: 8px; color: #ffe1a3; font-size: 14px; }
+.chapter-actions { position: absolute; right: 3%; bottom: 4%; display: flex; gap: 8px; pointer-events: auto; }
+.chapter-actions button, .chapter-touch button, .chapter-panel button { color: #fff; background: #123b56bb; border: 1px solid #ffffffb8; border-radius: 12px; padding: 12px 16px; font: inherit; cursor: pointer; backdrop-filter: blur(8px); touch-action: none; }
+.chapter-actions button:active, .chapter-touch button:active { background: #277c92; }
+#chapterUi.slow { box-shadow: inset 0 0 80px #53d5e744; }
+.chapter-touch { display: none; position: absolute; left: 3%; bottom: 4%; gap: 8px; align-items: center; pointer-events: auto; }
+.chapter-touch span { display: flex; flex-direction: column; gap: 8px; }
+.chapter-touch button { width: 48px; height: 48px; padding: 0; font-size: 23px; }
+#chapterModal { position: absolute; inset: 0; display: grid; place-items: center; background: #061b2d88; pointer-events: auto; }
+.chapter-panel { width: min(430px, 88vw); padding: 32px; border: 1px solid #ffffffb8; border-radius: 18px; background: #153b55df; text-align: center; backdrop-filter: blur(14px); }
+.chapter-panel h2 { white-space: pre-line; font-size: 20px; line-height: 1.6; }
+.chapter-panel button { margin: 8px; min-width: 110px; }
+@media (pointer: coarse) { .chapter-touch { display: flex; } .chapter-actions { bottom: 7%; } }
+@media (max-height: 520px) { .chapter-touch button { width: 40px; height: 40px; } .chapter-panel { padding: 16px; } }
