@@ -21,3 +21,7 @@
 .playtest-feedback { margin: 18px 0 0; font-size: 13px; }
 @media (pointer: coarse) { .chapter-touch { display: flex; } .chapter-actions { bottom: 7%; } }
 @media (max-height: 520px) { .chapter-touch button { width: 40px; height: 40px; } .chapter-panel { padding: 16px; } }
+
+.enemy-lock { position:fixed; z-index:6; width:100px; height:100px; transform:translate(-50%,-50%); pointer-events:none; border:2px solid #ffe1a0; border-radius:16px; box-shadow:0 0 22px #ffcc6655,inset 0 0 18px #ffdd6655; }
+.enemy-lock:before,.enemy-lock:after { content:'';position:absolute;inset:-9px;border:1px solid #fff5ce;clip-path:polygon(0 0,25% 0,25% 3%,3% 3%,3% 25%,0 25%,0 0,100% 0,100% 25%,97% 25%,97% 3%,75% 3%,75% 0,100% 0,100% 100%,75% 100%,75% 97%,97% 97%,97% 75%,100% 75%,100% 100%,0 100%,0 75%,3% 75%,3% 97%,25% 97%,25% 100%,0 100%); }
+.enemy-lock span {position:absolute;top:108px;left:0;width:160px;color:#fff3ce;font:600 13px system-ui;text-shadow:0 2px 4px #000;}
