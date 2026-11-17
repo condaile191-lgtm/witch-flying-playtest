@@ -4,6 +4,14 @@ export class ChapterVisuals {
   constructor(chapter) {
     this.c = chapter;
     this.effects = [];
+    this.gates = [];
+    this.structures = [];
+    this.surfaceMeshes = [];
+    fetch('./assets/chapter/gate-dressing.json').then(r=>{if(!r.ok)throw Error('Gate asset failed');return r.json();}).then(data=>{
+      this.dressing=new THREE.BufferGeometry();
+      for(const [name,size] of Object.entries({position:3,normal:3,aUv:2,aCol:4,aMw:1,aAo:1})) this.dressing.setAttribute(name,new THREE.Float32BufferAttribute(data[name],size));
+      this.dressing.computeBoundingSphere();
+    }).catch(console.error);
     const loader = new THREE.TextureLoader();
     const texture = loader.load('./assets/textures/flagstone_c.webp');
     texture.colorSpace = THREE.SRGBColorSpace;
@@ -18,22 +26,23 @@ export class ChapterVisuals {
     this.lock=document.createElement('div');this.lock.className='enemy-lock';this.lock.hidden=true;this.lock.innerHTML='<i></i><span>锁定 · J 爆破</span>';document.body.append(this.lock);
   }
   box(group,x,y,w,h,d,material) {
-    const mesh=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),material);mesh.position.set(x,y,0);group.add(mesh);return mesh;
+    const mesh=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),material);mesh.position.set(x,y,0);group.add(mesh);
+    if(material===this.stone||material===this.wood) this.surfaceMeshes.push({mesh,materialId:material===this.wood?3:0});
+    return mesh;
   }
   obstacle(s,kind,opening=0) {
     const c=this.c,group=new THREE.Group(),parts=[];
     group.position.copy(c.point(s));
-    const t=c.curve.getTangentAt(s/c.length);group.rotation.y=Math.atan2(-t.x,t.z);
+    const t=c.curve.getTangentAt(s/c.length);group.rotation.y=Math.atan2(-t.x,-t.z);
     const add=(x,y,w,h)=>{
       const mesh=this.box(group,x,y,w,h,2.4,this.stone);
       parts.push({s,x,h:y,w,ht:h,mesh,gone:false});
-      for(let yy=-h/2+1;yy<h/2;yy+=2) {
-        const line=this.box(mesh,0,yy,w+.06,.09,2.48,this.wood);line.position.z=0;
-      }
+
     };
     if(kind==='ring') {
       const count=20,r=7.2;
       for(let i=0;i<count;i++) {const a=i/count*Math.PI*2;add(Math.cos(a)*r,Math.sin(a)*r,2.3,2.3);}
+      for(let x=-15;x<15;x+=3)for(let y=-9;y<11;y+=2){const cx=x+1.5,cy=y+1;if(Math.hypot(cx,cy)>9)add(cx,cy,2.92,1.92);}
     } else {
       const holes=kind==='windows'?[[-7,1],[7,1]]:[[opening,kind==='high'?3:0]];
       // Tiled masonry shares the exact visible and collidable opening layout.
@@ -43,6 +52,7 @@ export class ChapterVisuals {
         add(cx,cy,2.92,1.92);
       }
       for(const [hx,hy] of holes) {
+        this.gates.push({group,hx,hy,decorated:false});
         this.box(group,hx-4.7,hy, .35,9.4,2.8,this.wood);
         this.box(group,hx+4.7,hy, .35,9.4,2.8,this.wood);
         this.box(group,hx,hy+4.6,9.7,.45,2.8,this.wood);
@@ -50,16 +60,16 @@ export class ChapterVisuals {
         const rune=new THREE.Mesh(new THREE.TorusGeometry(.45,.07,8,20),this.magic);rune.position.set(hx,hy+5.2,-1.6);group.add(rune);
       }
     }
-    c.group.add(group);return parts;
+    c.group.add(group);this.structures.push({s,group});return parts;
   }
   enemy() {
+    // Reuse the actual authored rider asset, including cloth/hat/lantern materials and mesh detail.
     const g=new THREE.Group();
-    const body=new THREE.Mesh(new THREE.SphereGeometry(2,24,16),this.metal);body.scale.set(1,.7,1.4);g.add(body);
-    const core=new THREE.Mesh(new THREE.IcosahedronGeometry(.9,2),this.magic);core.position.z=-1.8;g.add(core);
-    for(const side of [-1,1]) {
-      const wing=new THREE.Mesh(new THREE.ConeGeometry(1.7,6,4),this.metal);wing.rotation.z=side*Math.PI/2;wing.position.x=side*3;g.add(wing);
-      const ring=new THREE.Mesh(new THREE.TorusGeometry(1.2,.12,8,32),this.magic);ring.rotation.y=Math.PI/2;ring.position.x=side*3;g.add(ring);
-    }
+    const rider=this.c.game.rider.model.clone(true);
+    rider.scale.multiplyScalar(1.35);
+    g.add(rider);
+    const aura=new THREE.Mesh(new THREE.TorusGeometry(2.1,.045,8,64),new THREE.MeshBasicMaterial({color:0xb6ecff,transparent:true,opacity:.55}));
+    aura.position.y=.3;g.add(aura);
     return g;
   }
   burst(position,color=0xffd28a) {
@@ -77,6 +87,24 @@ export class ChapterVisuals {
     g.position.copy(from);g.lookAt(to);this.c.group.add(g);this.effects.push({mesh:g,life:.23,total:.23,from:from.clone(),to:to.clone(),onHit});
   }
   update(dt) {
+    for(const structure of this.structures) structure.group.visible=structure.s>this.c.s-35&&structure.s<this.c.s+420;
+    if(this.c.game.town.material) for(const item of this.surfaceMeshes) {
+      if(item.ready)continue;
+      const g=item.mesh.geometry,p=g.attributes.position,n=g.attributes.normal;
+      const uv=[],col=[],mw=[],ao=[];
+      for(let i=0;i<p.count;i++) {
+        const x=p.getX(i),y=p.getY(i),z=p.getZ(i);
+        uv.push((Math.abs(n.getX(i))>.5?z:x)*256,y*256);
+        col.push(1,.96,.86,0);mw.push(item.materialId);ao.push(.88);
+      }
+      g.setAttribute('aUv',new THREE.Float32BufferAttribute(uv,2));g.setAttribute('aCol',new THREE.Float32BufferAttribute(col,4));g.setAttribute('aMw',new THREE.Float32BufferAttribute(mw,1));g.setAttribute('aAo',new THREE.Float32BufferAttribute(ao,1));
+      item.mesh.material=this.c.game.town.material;item.mesh.renderOrder=290;item.ready=true;
+    }
+    if(this.dressing && this.c.game.town.material) for(const gate of this.gates) {
+      if(gate.decorated)continue;
+      const mesh=new THREE.Mesh(this.dressing,this.c.game.town.material);
+      mesh.position.set(gate.hx,gate.hy,0);mesh.renderOrder=290;gate.group.add(mesh);gate.decorated=true;
+    }
     for(let i=this.effects.length-1;i>=0;i--) {
       const e=this.effects[i];e.life-=dt;
       if(e.from)e.mesh.position.lerpVectors(e.from,e.to,Math.min(1,1-e.life/e.total));
