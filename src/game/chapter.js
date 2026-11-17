@@ -88,6 +88,7 @@ export class Chapter {
     });
     document.getElementById('chapterRetry').addEventListener('click', () => this.start());
     document.getElementById('chapterContinue').addEventListener('click', () => this.togglePause());
+    document.getElementById('chapterPause').addEventListener('click', () => this.togglePause());
     document.getElementById('chapterAttack').addEventListener('pointerdown', e => { e.preventDefault(); this.attack(); });
     document.getElementById('chapterSlow').addEventListener('pointerdown', e => { e.preventDefault(); this.slow(); });
     for (const button of document.querySelectorAll('[data-move]')) {
