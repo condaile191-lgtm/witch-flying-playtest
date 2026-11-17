@@ -1,0 +1,23 @@
+[
+  {
+    "file": "fairy-adventure.ogg",
+    "source": "https://opengameart.org/sites/default/files/fairy_adventure_bpm140_0.ogg",
+    "bytes": 4657629,
+    "sha256": "615c102a7bb04dea274f694658997a551a18536503f3c0587d6245218dac924f",
+    "license": "CC0-1.0"
+  },
+  {
+    "file": "whispers-in-the-fog.ogg",
+    "source": "https://opengameart.org/sites/default/files/whispers_in_the_fog.ogg",
+    "bytes": 204349,
+    "sha256": "3900af8578b0a771f2362118c7885a5078ea2c65170cbd0c5cad64b3162ffffd",
+    "license": "CC0-1.0"
+  },
+  {
+    "file": "superhero.ogg",
+    "source": "https://opengameart.org/sites/default/files/Superhero_pack_0.zip",
+    "bytes": 2811697,
+    "sha256": "5056acb76461b1089fa09dd5185e747de6e3b7765ec6e2053fd74bc2678b9ead",
+    "license": "CC0-1.0"
+  }
+]
