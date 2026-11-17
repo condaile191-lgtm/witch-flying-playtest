@@ -73,6 +73,7 @@ const tick = () => new Promise((r) => setTimeout(r, 0));
 
 // ---------------------------------------------------------------------------------- boot
 async function boot() {
+  performance.mark('boot-start');
   $('title').classList.add('loading');
   applyEnv('afternoon');
   const noise = makeNoiseTexture();
@@ -91,6 +92,7 @@ async function boot() {
   setLoad(0.08, 'raising the island…');
   const riderLoad = Rider.load(renderer);
   const terrain = (game.terrain = await Terrain.load(renderer));
+  performance.mark('terrain-ready');
   terrain.mainView.mesh.renderOrder = 500;
   world.add(terrain.mainView.mesh);
   await tick();
@@ -98,6 +100,7 @@ async function boot() {
   setLoad(0.4, 'sowing the meadows…');
   const meadow = (game.meadow = new Meadow(terrain, params.get('q') || 'high'));
   world.add(meadow.group);
+  performance.mark('meadow-ready');
 
   const sky = (game.sky = new Sky());
   world.add(sky.mesh);
@@ -116,6 +119,7 @@ async function boot() {
 
   setLoad(0.9, 'waking the broom…');
   const rider = (game.rider = await riderLoad);
+  performance.mark('rider-ready');
   pipeline.overlay.add(rider.group, rider.lights);
   pipeline.overlay.environment = sky.bakeEnvironment(renderer);
   const vortex = (game.vortex = new VortexWake(terrain));
@@ -148,6 +152,7 @@ async function boot() {
   $('title').querySelector('.bar').hidden = true;
   game.ready = true;
   game.readyAt = performance.now();
+  performance.mark('game-ready');
   $('title').classList.remove('loading');
   $('start').hidden = false;
   $('keys').hidden = false;
