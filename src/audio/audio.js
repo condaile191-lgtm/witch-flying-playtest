@@ -82,6 +82,19 @@ export class Sound {
     this.rev.connect(this.revG).connect(out);
   }
 
+  /** Short procedural magic launch / impact, routed through the existing master and reverb. */
+  blast(impact = false) {
+    if (!this.ctx || this.muted) return;
+    const ctx=this.ctx,t=ctx.currentTime,duration=impact?.32:.17;
+    const osc=ctx.createOscillator(),volume=ctx.createGain();
+    osc.type=impact?'triangle':'sine';
+    osc.frequency.setValueAtTime(impact?180:720,t);
+    osc.frequency.exponentialRampToValueAtTime(impact?42:120,t+duration);
+    volume.gain.setValueAtTime(.0001,t);volume.gain.exponentialRampToValueAtTime(.16,t+.012);volume.gain.exponentialRampToValueAtTime(.0001,t+duration);
+    osc.connect(volume);volume.connect(this.master);volume.connect(this.rev);osc.start(t);osc.stop(t+duration+.02);
+    osc.onended=()=>{osc.disconnect();volume.disconnect();};
+  }
+
   /** A bell; n picks the note so successive seeds climb a scale. */
   chime(n = 0) {
     if (!this.ctx || this.muted) return;

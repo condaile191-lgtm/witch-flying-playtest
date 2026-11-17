@@ -43,20 +43,20 @@ export class Chapter {
 
   makeCourse() {
     this.visuals = new ChapterVisuals(this);
-    for (const [distance, kind, opening] of [[190,'gate',-7],[340,'gate',7],[510,'windows',0],[680,'gate',0],[850,'high',0],[1210,'ring',0],[1390,'gate',-7]]) {
+    for (const [distance, kind, opening] of [[190,'gate',-7],[340,'gate',7],[510,'rotor',0],[680,'slider',0],[850,'high',0],[1210,'ring',0],[1390,'gate',-7]]) {
       this.obstacles.push(...this.visuals.obstacle(distance,kind,opening));
     }
     const glow = new THREE.MeshBasicMaterial({ color: 0xffdb78 });
     for (const s of [100, 215, 335, 475, 615, 785, 955, 1130, 1270, 1430]) {
       if (s >= this.length - 30) continue;
-      const mesh = new THREE.Mesh(new THREE.IcosahedronGeometry(1.45, 1), glow);
+      const mesh = new THREE.Mesh(new THREE.TorusGeometry(.8, .12, 8, 32), glow);
       const x = s % 2 ? 4 : -4;
       mesh.position.copy(this.point(s, x, 1));
       this.group.add(mesh);
       this.pickups.push({ s, x, mesh, got: false });
     }
     // A persistent ability pickup sits at the start of the windmill approach.
-    const orb = new THREE.Mesh(new THREE.IcosahedronGeometry(2.1, 1), new THREE.MeshBasicMaterial({ color: 0x74f4ed }));
+    const orb = new THREE.Mesh(new THREE.TorusGeometry(1.2, .15, 8, 32), new THREE.MeshBasicMaterial({ color: 0x74f4ed }));
     orb.position.copy(this.point(380, 0, 2));
     this.group.add(orb);
     this.abilityPickup = { s: 380, mesh: orb, got: false };
@@ -89,6 +89,7 @@ export class Chapter {
   }
 
   start() {
+    this.visuals.clearEffects();
     this.s = 0; this.x = 0; this.h = 0; this.vx = 0; this.vh = 0;
     this.speed = CFG.speed; this.score = 0; this.attackLeft = 0; this.slowLeft = 0;
     this.slowTime = 0; this.hasSlow = false; this.invuln = 0; this.paused = false;
@@ -157,7 +158,7 @@ export class Chapter {
       if (o.got || Math.abs(o.s - this.s) > 3 || Math.abs(o.x - this.x) > 3 || Math.abs(1 - this.h) > 4) continue;
       o.got = true; o.mesh.visible = false; this.score += 100;
       this.speed = Math.min(CFG.maxSpeed, this.speed + 1.8);
-      this.game.sound.chime(this.score / 100);
+      this.game.sound.chime(Math.floor(this.score / 100));
       this.game.toast('风能收集 · 速度提升');
     }
     const a = this.abilityPickup;
@@ -167,7 +168,9 @@ export class Chapter {
     }
     for (const o of this.obstacles) {
       if (o.gone || this.invuln > 0 || o.s < this.s - 4 || o.s > this.s + 4) continue;
-      if (Math.abs(o.x - this.x) < o.w / 2 + 0.8 && Math.abs(o.h - this.h) < o.ht / 2 + 0.8) {
+      const angle=o.angle||0,dx=this.x-o.x,dy=this.h-o.h;
+      const rx=dx*Math.cos(angle)+dy*Math.sin(angle),ry=-dx*Math.sin(angle)+dy*Math.cos(angle);
+      if (Math.abs(rx) < o.w / 2 + 0.8 && Math.abs(ry) < o.ht / 2 + 0.8) {
         this.damage('撞上了前方障碍');
       }
     }
@@ -196,7 +199,7 @@ export class Chapter {
       e.mesh.position.copy(this.point(e.s,e.x,e.h));
       const tangent=this.curve.getTangentAt(e.s/this.length);
       e.mesh.rotation.y=Math.atan2(tangent.x,-tangent.z);
-      if(e.age > 9){e.alive=false;e.mesh.visible=false;this.game.toast('敌人撤离 · 继续前进');continue;}
+      if(e.age > 6){e.alive=false;e.mesh.visible=false;this.game.toast('敌人撤离 · 继续前进');continue;}
       e.fire -= dt;
       if (e.fire <= 0) {
         e.fire = 1.5;
@@ -221,26 +224,29 @@ export class Chapter {
   attack() {
     if (!this.active || this.paused || this.attackLeft > 0) return;
     this.attackLeft = CFG.attackCd;
+    this.game.sound.blast();
     const enemy = this.target();
     if (enemy) {
-      const hitPoint = enemy.mesh.position.clone();
-      this.visuals.bolt(this.game.flight.pos.clone(), hitPoint, () => this.visuals.burst(hitPoint,0x9bf8ff));
-      enemy.hp--;
-
-      if (enemy.hp <= 0) { enemy.alive = false; enemy.mesh.visible = false; this.score += 250; this.game.toast('敌人清除 · 继续飞行'); }
-      else this.game.toast('爆破命中 · 再来一次');
-      this.updateHud();
+      this.visuals.bolt(this.game.flight.pos.clone(), enemy.mesh.position, () => {
+        if(!enemy.alive)return;
+        this.visuals.burst(enemy.mesh.position.clone(),0x9bf8ff);
+        enemy.hp--;
+        if(enemy.hp<=0){enemy.alive=false;enemy.mesh.visible=false;this.score+=250;this.game.toast('敌人清除 · 继续飞行');}
+        else this.game.toast('爆破命中 · 再来一次');
+        this.updateHud();
+      },enemy.mesh);
       return;
     }
     const target = this.obstacles.find(o => !o.gone && o.s > this.s && o.s - this.s < 48 && Math.abs(o.x - this.x) < o.w / 2 + 3 && Math.abs(o.h - this.h) < o.ht / 2 + 3);
     if (target) {
       const hit=target.mesh.getWorldPosition(new THREE.Vector3());
-      this.visuals.bolt(this.game.flight.pos.clone(),hit,()=>this.visuals.burst(hit));
-      // Blast opens a complete, visible passage; removed masonry shares collision state.
-      for(const o of this.obstacles) if(!o.gone && Math.abs(o.s-target.s)<1 && Math.abs(o.x-target.x)<4.5 && Math.abs(o.h-target.h)<5){o.gone=true;o.mesh.visible=false;}
-      this.score+=50;this.game.toast('爆破命中 · 通路打开');
+      this.visuals.bolt(this.game.flight.pos.clone(),hit,()=>{
+        this.visuals.burst(hit);
+        for(const o of this.obstacles) if(!o.gone && Math.abs(o.s-target.s)<1 && Math.abs(o.x-target.x)<4.5 && Math.abs(o.h-target.h)<5){o.gone=true;o.mesh.visible=false;}
+        this.score+=50;this.game.toast('爆破命中 · 通路打开');
+      });
     }
-    else this.game.toast('爆破 · 前方没有目标');
+    else { this.visuals.bolt(this.game.flight.pos.clone(), this.point(Math.min(this.length,this.s+45),this.x,this.h)); this.game.toast('爆破 · 前方没有目标'); }
     this.updateHud();
   }
 

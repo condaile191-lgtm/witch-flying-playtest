@@ -6,6 +6,8 @@ export class ChapterVisuals {
     this.effects = [];
     this.gates = [];
     this.structures = [];
+    this.rotors = [];
+    this.clock = 0;
     this.surfaceMeshes = [];
     fetch('./assets/chapter/gate-dressing.json').then(r=>{if(!r.ok)throw Error('Gate asset failed');return r.json();}).then(data=>{
       this.dressing=new THREE.BufferGeometry();
@@ -39,14 +41,24 @@ export class ChapterVisuals {
       parts.push({s,x,h:y,w,ht:h,mesh,gone:false});
 
     };
-    if(kind==='ring') {
+    if(kind==='rotor') {
+      for(let i=0;i<4;i++) {
+        add(0,5,2.3,8);
+        const blade=parts[parts.length-1];
+        this.surfaceMeshes[this.surfaceMeshes.length-1].materialId=3;
+        const cloth=new THREE.Mesh(new THREE.PlaneGeometry(1.7,6.4,3,8),new THREE.MeshStandardMaterial({color:0xf0dfb5,roughness:1,side:THREE.DoubleSide}));
+        cloth.position.z=-1.3;blade.mesh.add(cloth);
+        this.rotors.push({blade,phase:i*Math.PI/2});
+      }
+      const hub=new THREE.Mesh(new THREE.CylinderGeometry(1.25,1.25,3.3,16),this.wood);hub.rotation.x=Math.PI/2;group.add(hub);parts.push({s,x:0,h:0,w:2.5,ht:2.5,mesh:hub,gone:false});
+    } else if(kind==='ring') {
       const count=20,r=7.2;
       for(let i=0;i<count;i++) {const a=i/count*Math.PI*2;add(Math.cos(a)*r,Math.sin(a)*r,2.3,2.3);}
-      for(let x=-15;x<15;x+=3)for(let y=-9;y<11;y+=2){const cx=x+1.5,cy=y+1;if(Math.hypot(cx,cy)>9)add(cx,cy,2.92,1.92);}
+      for(let x=-18;x<18;x+=3)for(let y=-9;y<11;y+=2){const cx=x+1.5,cy=y+1;if(Math.hypot(cx,cy)>9)add(cx,cy,2.92,1.92);}
     } else {
       const holes=kind==='windows'?[[-7,1],[7,1]]:[[opening,kind==='high'?3:0]];
       // Tiled masonry shares the exact visible and collidable opening layout.
-      for(let x=-15;x<15;x+=3)for(let y=-9;y<11;y+=2) {
+      for(let x=-18;x<18;x+=3)for(let y=-9;y<11;y+=2) {
         const cx=x+1.5,cy=y+1;
         if(holes.some(([hx,hy])=>Math.abs(cx-hx)<4.8&&Math.abs(cy-hy)<4.5))continue;
         add(cx,cy,2.92,1.92);
@@ -60,7 +72,8 @@ export class ChapterVisuals {
         const rune=new THREE.Mesh(new THREE.TorusGeometry(.45,.07,8,20),this.magic);rune.position.set(hx,hy+5.2,-1.6);group.add(rune);
       }
     }
-    c.group.add(group);this.structures.push({s,group});return parts;
+    c.group.add(group);this.structures.push({s,group,kind,parts});
+    for(const o of parts)o.baseX=o.x;return parts;
   }
   enemy() {
     // Reuse the actual authored rider asset, including cloth/hat/lantern materials and mesh detail.
@@ -73,6 +86,7 @@ export class ChapterVisuals {
     return g;
   }
   burst(position,color=0xffd28a) {
+    this.c.game.sound.blast(true);
     const mat=new THREE.MeshBasicMaterial({color,transparent:true});
     for(let i=0;i<22;i++) {
       const m=new THREE.Mesh(new THREE.TetrahedronGeometry(.15+Math.random()*.45),mat.clone());m.position.copy(position);this.c.group.add(m);
@@ -80,14 +94,31 @@ export class ChapterVisuals {
     }
     const ring=new THREE.Mesh(new THREE.TorusGeometry(1,.08,8,40),mat.clone());ring.position.copy(position);ring.quaternion.copy(this.c.game.camera.quaternion);this.c.group.add(ring);this.effects.push({mesh:ring,life:.4,total:.4,ring:true});
   }
-  bolt(from,to,onHit) {
+  bolt(from,to,onHit,targetRef=null) {
     const g=new THREE.Group();
     g.add(new THREE.Mesh(new THREE.SphereGeometry(.35,12,8),new THREE.MeshBasicMaterial({color:0xfff5c7})));
     const tail=new THREE.Mesh(new THREE.ConeGeometry(.28,4,12),new THREE.MeshBasicMaterial({color:0xffa64b,transparent:true,opacity:.65}));tail.rotation.x=Math.PI/2;tail.position.z=1.5;g.add(tail);
-    g.position.copy(from);g.lookAt(to);this.c.group.add(g);this.effects.push({mesh:g,life:.23,total:.23,from:from.clone(),to:to.clone(),onHit});
+    g.position.copy(from);g.lookAt(to);this.c.group.add(g);this.effects.push({mesh:g,life:.23,total:.23,from:from.clone(),to:to.clone(),onHit,targetRef});
+  }
+  clearEffects() {
+    for(const e of this.effects){this.c.group.remove(e.mesh);e.mesh.traverse(m=>{m.geometry?.dispose();m.material?.dispose();});}
+    this.effects.length=0;
   }
   update(dt) {
-    for(const structure of this.structures) structure.group.visible=structure.s>this.c.s-35&&structure.s<this.c.s+420;
+    this.clock+=dt*(this.c.slowTime>0?.42:1);
+    for(const rotor of this.rotors) {
+      const a=this.clock*.48+rotor.phase,o=rotor.blade;
+      o.x=Math.sin(a)*5;o.h=Math.cos(a)*5;o.angle=-a;
+      o.mesh.position.set(o.x,o.h,0);o.mesh.rotation.z=o.angle;
+    }
+    for(const structure of this.structures) {
+      structure.group.visible=structure.s>this.c.s-35&&structure.s<this.c.s+420;
+      if(structure.kind==='slider') {
+        const shift=Math.sin(this.clock*.55)*3;
+        structure.group.position.copy(this.c.point(structure.s,shift));
+        for(const o of structure.parts)o.x=o.baseX+shift;
+      }
+    }
     if(this.c.game.town.material) for(const item of this.surfaceMeshes) {
       if(item.ready)continue;
       const g=item.mesh.geometry,p=g.attributes.position,n=g.attributes.normal;
@@ -107,6 +138,7 @@ export class ChapterVisuals {
     }
     for(let i=this.effects.length-1;i>=0;i--) {
       const e=this.effects[i];e.life-=dt;
+      if(e.targetRef)e.to.copy(e.targetRef.position);
       if(e.from)e.mesh.position.lerpVectors(e.from,e.to,Math.min(1,1-e.life/e.total));
       else if(e.ring)e.mesh.scale.setScalar(1+(1-e.life/e.total)*9);
       else {e.mesh.position.addScaledVector(e.v,dt);e.v.y-=dt*12;e.mesh.rotation.x+=dt*4;}
@@ -115,6 +147,6 @@ export class ChapterVisuals {
     }
     const target=this.c.active?this.c.target():null;
     this.lock.hidden=!target;
-    if(target){const p=target.mesh.position.clone().project(this.c.game.camera);this.lock.hidden=p.z>1;this.lock.style.left=`${(p.x*.5+.5)*innerWidth}px`;this.lock.style.top=`${(-p.y*.5+.5)*innerHeight}px`;}
+    if(target){this.c.game.camera.updateMatrixWorld(true);const p=target.mesh.position.clone().project(this.c.game.camera);this.lock.hidden=p.z>1;this.lock.style.left=`${(p.x*.5+.5)*innerWidth}px`;this.lock.style.top=`${(-p.y*.5+.5)*innerHeight}px`;}
   }
 }
