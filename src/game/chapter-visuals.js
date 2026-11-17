@@ -29,7 +29,7 @@ export class ChapterVisuals {
   }
   box(group,x,y,w,h,d,material) {
     const mesh=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),material);mesh.position.set(x,y,0);group.add(mesh);
-    if(material===this.stone||material===this.wood) this.surfaceMeshes.push({mesh,materialId:material===this.wood?3:0});
+    if(material===this.stone||material===this.wood) this.surfaceMeshes.push({mesh,materialId:material===this.wood?4:0});
     return mesh;
   }
   obstacle(s,kind,opening=0) {
@@ -37,7 +37,7 @@ export class ChapterVisuals {
     group.position.copy(c.point(s));
     const t=c.curve.getTangentAt(s/c.length);group.rotation.y=Math.atan2(-t.x,-t.z);
     const add=(x,y,w,h)=>{
-      const mesh=this.box(group,x,y,w,h,2.4,this.stone);
+      const mesh=this.box(group,x,y,w,h,2.4,s<600?this.wood:this.stone);
       parts.push({s,x,h:y,w,ht:h,mesh,gone:false});
 
     };
@@ -45,9 +45,9 @@ export class ChapterVisuals {
       for(let i=0;i<4;i++) {
         add(0,5,2.3,8);
         const blade=parts[parts.length-1];
-        this.surfaceMeshes[this.surfaceMeshes.length-1].materialId=3;
+        this.surfaceMeshes[this.surfaceMeshes.length-1].materialId=4;
         const cloth=new THREE.Mesh(new THREE.PlaneGeometry(1.7,6.4,3,8),new THREE.MeshStandardMaterial({color:0xf0dfb5,roughness:1,side:THREE.DoubleSide}));
-        cloth.position.z=-1.3;blade.mesh.add(cloth);
+        cloth.position.z=1.3;blade.mesh.add(cloth);
         this.rotors.push({blade,phase:i*Math.PI/2});
       }
       const hub=new THREE.Mesh(new THREE.CylinderGeometry(1.25,1.25,3.3,16),this.wood);hub.rotation.x=Math.PI/2;group.add(hub);parts.push({s,x:0,h:0,w:2.5,ht:2.5,mesh:hub,gone:false});
@@ -70,6 +70,11 @@ export class ChapterVisuals {
         this.box(group,hx,hy+4.6,9.7,.45,2.8,this.wood);
         const lintel=this.box(group,hx,hy+5.2,10.4,.65,3,this.stone);
         const rune=new THREE.Mesh(new THREE.TorusGeometry(.45,.07,8,20),this.magic);rune.position.set(hx,hy+5.2,-1.6);group.add(rune);
+      }
+    }
+    if(kind!=='rotor') {
+      for(let x=-16;x<=16;x+=4) {
+        this.box(group,x,11.2,2.2,1.8,2.8,s<600?this.wood:this.stone);
       }
     }
     c.group.add(group);this.structures.push({s,group,kind,parts});
