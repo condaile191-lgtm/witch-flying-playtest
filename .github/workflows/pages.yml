@@ -24,6 +24,7 @@ jobs:
           mkdir site
           cp index.html CREDITS.md .nojekyll site/
           cp -R assets audio site/
+          if [ -d one-hand ]; then cp -R one-hand site/; fi
       - uses: actions/upload-pages-artifact@v4
         with:
           path: site
